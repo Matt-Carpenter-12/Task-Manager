@@ -63,10 +63,17 @@ function renderTaskList() {
 // Todo: create a function to handle adding a new task
 function handleAddTask(event) {
     event.preventDefault();
+    
     const form = document.getElementById('taskForm');
     const taskTitle = document.getElementById('taskTitle').value;
     const taskDescription = document.getElementById('taskDescription').value;
     const taskDueDate = document.getElementById('taskDueDate').value;
+
+    // Validate if form fields have values
+    if (!taskTitle || !taskDescription || !taskDueDate) {
+        console.error('Please fill in all fields.');
+        return;
+    }
 
     const newTask = {
         id: generateTaskId(),
@@ -76,13 +83,19 @@ function handleAddTask(event) {
         status: 'todo'
     };
 
+    console.log('New task object:', newTask);
+
     let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
     tasks.push(newTask);
     localStorage.setItem('tasks', JSON.stringify(tasks));
+
+    console.log('Tasks in localStorage:', tasks);
+
     renderTaskList();
     $('#formModal').modal('hide');
     form.reset();
 }
+
 
 // Todo: create a function to handle deleting a task
 function handleDeleteTask(event) {
