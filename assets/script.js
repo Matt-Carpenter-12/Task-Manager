@@ -3,125 +3,127 @@ let taskList = JSON.parse(localStorage.getItem("tasks"));
 let nextId = JSON.parse(localStorage.getItem("nextId"));
 
 // Todo: create a function to generate a unique task id
-function generateTaskId() {
-    // Check if taskIdCounter exists in localStorage
-    if (!localStorage.getItem('taskIdCounter')) {
-        localStorage.setItem('taskIdCounter', '1'); // Initialize taskIdCounter if it doesn't exist
-    }
-    
-    // Retrieve the current taskIdCounter value from localStorage
-    let taskId = parseInt(localStorage.getItem('taskIdCounter'));
-    
-    // Increment taskIdCounter for the next task
-    localStorage.setItem('taskIdCounter', String(taskId + 1));
-    
-    return taskId;
+const generateTaskId = function() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
 }
+
+console.log(generateTaskId());
 
 
 // Todo: create a function to create a task card
-function createTaskCard(task) {
- // Create a <div> element for the task card
-    const taskCard = document.createElement('div');
-    taskCard.classList.add('task-card');
-    taskCard.setAttribute('data-task-id', task.id); // Set data-task-id attribute with task ID
+      function createTaskCard(taskTitle, taskDescription, taskDueDate) {
+            const card = document.createElement('div');
+            card.classList.add('task-card');
 
-    // Create inner HTML for the task card
-    taskCard.innerHTML = `
-        <h3 class="task-title">${task.title}</h3>
-        <p class="task-desc">${task.description}</p>
-        <p class="task-date">Due Date: ${task.dueDate}</p>
-    `;
+            const titleElement = document.createElement('h3');
+            titleElement.textContent = taskTitle;
 
-    return taskCard;
-}
+            const descriptionElement = document.createElement('p');
+            descriptionElement.textContent = taskDescription;
+
+            const dueDateElement = document.createElement('p');
+            dueDateElement.textContent = `Due Date: ${taskDueDate}`;
+
+            card.appendChild(titleElement);
+            card.appendChild(descriptionElement);
+            card.appendChild(dueDateElement);
+
+            return card;
+      }
 
 // Todo: create a function to render the task list and make cards draggable
 function renderTaskList() {
-    // Retrieve tasks from localStorage or initialize if empty
-    let tasks = JSON.parse(localStorage.getItem('tasks')) || { todo: [], inProgress: [], done: [] };
+    const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    const todoCards = document.getElementById('todo-cards');
+    const inProgressCards = document.getElementById('in-progress-cards');
+    const doneCards = document.getElementById('done-cards');
 
-    // Function to render tasks in each lane
-    renderTaskLane(tasks.todo, '#todo-cards');
-    renderTaskLane(tasks.inProgress, '#in-progress-cards');
-    renderTaskLane(tasks.done, '#done-cards');
+    todoCards.innerHTML = '';
+    inProgressCards.innerHTML = '';
+    doneCards.innerHTML = '';
 
-    // Enable drag-and-drop functionality using jQuery UI Sortable
-    $('.lane .card-body').sortable({
-        connectWith: '.lane .card-body',
-        update: function(event, ui) {
-            const taskIndex = ui.item.index(); // Index of dragged task
-            const currentLaneId = ui.item.closest('.lane').attr('id'); // ID of current lane
-
-            // Determine destination lane based on current lane ID
-            let destinationLane;
-            switch (currentLaneId) {
-                case 'to-do':
-                    destinationLane = 'todo';
-                    break;
-                case 'in-progress':
-                    destinationLane = 'inProgress';
-                    break;
-                case 'done':
-                    destinationLane = 'done';
-                    break;
-                default:
-                    destinationLane = 'todo'; // Default to 'To Do' if not recognized
-            }
-
-            // Retrieve task data from tasks object
-            const task = tasks[currentLaneId][taskIndex];
-
-            // Remove task from current lane and add to destination lane
-            tasks[currentLaneId].splice(taskIndex, 1); // Remove from current lane
-            tasks[destinationLane].push(task); // Add to new lane
-
-            // Update tasks in localStorage
-            localStorage.setItem('tasks', JSON.stringify(tasks));
+    tasks.forEach(task => {
+        const card = createTaskCard(task.title, task.description, task.dueDate);
+        if (task.status === 'todo') {
+            todoCards.appendChild(card);
+        } else if (task.status === 'inProgress') {
+            inProgressCards.appendChild(card);
+        } else if (task.status === 'done') {
+            doneCards.appendChild(card);
         }
     });
-}
 
-// Function to render tasks in a specific lane
-function renderTaskLane(tasksArray, containerId) {
-    const taskContainer = $(containerId);
-    taskContainer.empty(); // Clear existing tasks
-
-    // Iterate through tasks array and create task cards
-    tasksArray.forEach(function(task) {
-        const taskCard = createTaskCard(task);
-        taskContainer.append(taskCard);
+    $('.task-card').draggable({
+        revert: 'invalid',
+        stack: '.task-card',
+        cursor: 'move',
+        containment: '.swim-lanes'
     });
 }
-
-// Function to create a task card
-function createTaskCard(task) {
-    const taskCard = $('<div class="task-card"></div>');
-    taskCard.attr('data-task-id', task.id); // Set data attribute for task ID
-    taskCard.html(`
-        <h3 class="task-title">${task.title}</h3>
-        <p class="task-desc">${task.description}</p>
-        <p class="task-date">Due Date: ${task.dueDate}</p>
-    `);
-    return taskCard;
-}
-
 // Todo: create a function to handle adding a new task
-function handleAddTask(event){
+function handleAddTask(event) {
+    event.preventDefault();
+    const form = document.getElementById('taskForm');
+    const taskTitle = document.getElementById('taskTitle').value;
+    const taskDescription = document.getElementById('taskDescription').value;
+    const taskDueDate = document.getElementById('taskDueDate').value;
 
+    const newTask = {
+        id: generateTaskId(),
+        title: taskTitle,
+        description: taskDescription,
+        dueDate: taskDueDate,
+        status: 'todo'
+    };
+
+    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    tasks.push(newTask);
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+    renderTaskList();
+    $('#formModal').modal('hide');
+    form.reset();
 }
 
 // Todo: create a function to handle deleting a task
-function handleDeleteTask(event){
-
+function handleDeleteTask(event) {
+    const taskId = event.target.closest('.task-card').dataset.taskId;
+    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    tasks = tasks.filter(task => task.id !== taskId);
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+    renderTaskList();
 }
 
 // Todo: create a function to handle dropping a task into a new status lane
 function handleDrop(event, ui) {
+    const taskId = ui.draggable[0].dataset.taskId;
+    const newStatus = event.target.closest('.lane').id;
 
+    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    tasks = tasks.map(task => {
+        if (task.id === taskId) {
+            task.status = newStatus;
+        }
+        return task;
+    });
+
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+    renderTaskList();
 }
 
 // Todo: when the page loads, render the task list, add event listeners, make lanes droppable, and make the due date field a date picker
-$(document).ready(function () {
+function handleDrop(event, ui) {
+    const taskId = ui.draggable[0].dataset.taskId;
+    const newStatus = event.target.closest('.lane').id;
 
-});
+    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    tasks = tasks.map(task => {
+        if (task.id === taskId) {
+            task.status = newStatus;
+        }
+        return task;
+    });
+
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+    renderTaskList();
+}
+
